@@ -17,4 +17,4 @@ naiveQA核心，负责根据提交的事件协调控制NMH（naiveQA Medium Host
 ### naiveQA Job Manager
 naiveQA工作管理器，主要功能是维护、校验和执行对应的工作；此模块会将控制文件描述的操作步骤具象化为事件传递给naiveQA Core，并负责生成报告
 ### naiveQA Medium
-naiveQA的宿主机通讯程序，在实际运行时会分为Host和Guest两个角色，主要功能有：双向传递消息、双向传递文件、打开宿主机程序等
+naiveQA的宿主机通讯程序，在实际运行时会分为Host和Guest两个角色，主要功能有：双向传递消息、双向传递文件、在宿主机运行命令/程序等
