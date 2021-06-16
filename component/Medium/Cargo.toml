@@ -1,0 +1,10 @@
+[package]
+name = "naiveqa_medium"
+version = "0.1.0"
+authors = ["Cno <dsyourshy@qq.com>"]
+edition = "2018"
+
+[dependencies]
+websocket = "0.24.0"
+futures = "0.3"
+tokio = "1.7.0"
