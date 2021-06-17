@@ -45,17 +45,17 @@ config:
 
 >使用转义符`\`可以取消对`;`的转译，例如"mcli command "echo too young\\;>1.txt;echo too simple>>1.txt"
 
-当存在多条命令时，不同命令的回显会使用`===COMMAND_NAME START===` `===COMMAND_NAME END===`包裹，例如：
+当存在多条命令时，不同命令的回显会使用`===START COMMAND_NAME===` `===END COMMAND_NAME===`包裹，例如：
 
 执行`echo sometimes;echo naive`，得到的回显为：
 ```
-===echo sometimes START===
+===START echo sometimes===
 sometimes
-===echo sometimes END===
+===END echo sometimes===
 
-===echo naive START===
+===START echo naive===
 naive
-===echo naive END===
+===END echo naive===
 ```
 
 ## 通讯
