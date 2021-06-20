@@ -64,10 +64,10 @@ Medium Host与Guest之间的通讯统一使用以下格式的Json：
 {
     //一个唯一的任务标识，由发起方生成
     "id":"114514",
-    //通讯任务类型
-    "type":"command",
-    //是请求还是回应 request/reply
-    "direction":"request"
+    //任务类型
+    "task":"command",
+    //是请求还是回应 request 0/reply 1
+    "direction":0
     //负载，包含任务需要的数据信息
     "payload":{}
 }
@@ -80,8 +80,8 @@ Medium Host与Guest之间的通讯统一使用以下格式的Json：
     "src":"",
     "dst":"",
     //分页信息，通常取每页200KB；后续版本分页前会对数据进行压缩
-    "currentPage":0,
-    "totalPages":10,
+    "current_page":0,
+    "total_page":10,
     //页面内容
     "page":""
 }

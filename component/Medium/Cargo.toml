@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 websocket = "0.24.0"
 argparse = "0.2.2"
+serde_json = "1.0"
