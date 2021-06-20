@@ -1,86 +1,59 @@
-extern crate futures;
-extern crate tokio;
 extern crate websocket;
+extern crate argparse;
 
-use std::fmt::Debug;
-
-use websocket::message::{Message, OwnedMessage};
-use websocket::r#async::Server;
-use websocket::server::InvalidConnection;
-
-use futures::{future, Future, Sink, Stream};
-use tokio::runtime::TaskExecutor;
+use std::thread;
+use websocket::sync::Server;
+use websocket::OwnedMessage;
+use argparse::{ArgumentParser, Store};
 
 fn main() {
-	let mut runtime = tokio::runtime::Builder::new().build().unwrap();
-	let executor = runtime.executor();
-	// bind to the server
-	let server = Server::bind("127.0.0.1:2794", &tokio::reactor::Handle::default()).unwrap();
+	//配置变量
+	let mut port="14514".to_string();
+	//解析参数
+	{
+		let mut ap=ArgumentParser::new();
+		ap.refer(&mut port).add_option(&["-p"],Store,"Port Medium Guest listening to");
+		ap.parse_args_or_exit();
+	}
+	//输出初始化信息
+	println!("Listening to {}",port);
 
-	// time to build the server's future
-	// this will be a struct containing everything the server is going to do
+	//尝试监听端口
+	let server_result = Server::bind("127.0.0.1:".to_owned()+&port);
+	if let Err(e)=server_result{
+		println!("Failed to listen port {},try -p argument to change the default port:{}",&port,e.to_string());
+		std::process::exit(1);
+	}
+	let server=server_result.unwrap();
+	//遍历连接请求
+	for request in server.filter_map(Result::ok) {
+		//为每个请求新建进程处理
+		thread::spawn(|| {
+			//接受请求连接
+			let mut client = request.accept().unwrap();
+			let ip = client.peer_addr().unwrap();
+			println!("Connection from {}", ip);
+			let message = OwnedMessage::Text("Hello".to_string());
+			client.send_message(&message).unwrap();
 
-	// a stream of incoming connections
-	let f = server
-		.incoming()
-		.then(future::ok) // wrap good and bad events into future::ok
-		.filter(|event| {
-			match event {
-				Ok(_) => true, // a good connection
-				Err(InvalidConnection { ref error, .. }) => {
-					println!("Bad client: {}", error);
-					false // we want to save the stream if a client cannot make a valid handshake
+			let (mut receiver, mut sender) = client.split().unwrap();
+
+			for message in receiver.incoming_messages() {
+				let message = message.unwrap();
+				match message {
+					OwnedMessage::Close(_) => {
+						let message = OwnedMessage::Close(None);
+						sender.send_message(&message).unwrap();
+						println!("Client {} disconnected", ip);
+						return;
+					}
+					OwnedMessage::Ping(ping) => {
+						let message = OwnedMessage::Pong(ping);
+						sender.send_message(&message).unwrap();
+					}
+					_ => sender.send_message(&message).unwrap(),
 				}
 			}
-		})
-		.and_then(|event| event) // unwrap good connections
-		.map_err(|_| ()) // and silently ignore errors (in `.filter`)
-		.for_each(move |(upgrade, addr)| {
-			println!("Got a connection from: {}", addr);
-			// check if it has the protocol we want
-			if !upgrade.protocols().iter().any(|s| s == "rust-websocket") {
-				// reject it if it doesn't
-				spawn_future(upgrade.reject(), "Upgrade Rejection", &executor);
-				return Ok(());
-			}
-
-			// accept the request to be a ws connection if it does
-			let f = upgrade
-				.use_protocol("rust-websocket")
-				.accept()
-				// send a greeting!
-				.and_then(|(s, _)| s.send(Message::text("Hello World!").into()))
-				// simple echo server impl
-				.and_then(|s| {
-					let (sink, stream) = s.split();
-					stream
-						.take_while(|m| Ok(!m.is_close()))
-						.filter_map(|m| {
-							println!("Message from Client: {:?}", m);
-							match m {
-								OwnedMessage::Ping(p) => Some(OwnedMessage::Pong(p)),
-								OwnedMessage::Pong(_) => None,
-								_ => Some(m),
-							}
-						})
-						.forward(sink)
-						.and_then(|(_, sink)| sink.send(OwnedMessage::Close(None)))
-				});
-
-			spawn_future(f, "Client Status", &executor);
-			Ok(())
 		});
-
-	runtime.block_on(f).unwrap();
-}
-
-fn spawn_future<F, I, E>(f: F, desc: &'static str, executor: &TaskExecutor)
-	where
-		F: Future<Item = I, Error = E> + 'static + Send,
-		E: Debug,
-{
-	executor.spawn(
-		f.map_err(move |e| println!("{}: '{:?}'", desc, e))
-			.map(move |_| println!("{}: Finished.", desc)),
-	);
+	}
 }
