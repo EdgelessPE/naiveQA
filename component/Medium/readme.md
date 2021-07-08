@@ -7,7 +7,7 @@ Medium分为守护进程`Medium`和脚手架进程`mcli`，守护进程常驻，
 
 在运行时需要区分Host和Guest两个角色，因此守护进程的启动命令可能为`Medium -r Host`或`Medium -r Guest`
 ## 技术
-为考虑Release体积，Medium使用Rust编写，考虑使用[rust-websocket](https://crates.io/crates/websocket)实现WebSocket通讯，自己实现协议控制与文件分段传输
+为考虑Release体积，Medium使用Rust编写，考虑使用 [rust-websocket](https://crates.io/crates/websocket) 实现WebSocket通讯，自己实现协议控制与文件分段传输
 ## 能力
 Medium提供的能力包括`file` `command`两种
 ### file

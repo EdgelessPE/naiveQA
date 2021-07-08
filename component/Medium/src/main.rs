@@ -1,4 +1,5 @@
 mod qam_struct;
+mod qam_command;
 
 extern crate websocket;
 extern crate argparse;
@@ -7,7 +8,6 @@ use std::thread;
 use websocket::sync::Server;
 use websocket::OwnedMessage;
 use argparse::{ArgumentParser, Store};
-use std::intrinsics::prefetch_write_instruction;
 
 fn main() {
 	//配置变量/常量
@@ -58,10 +58,41 @@ fn main() {
 						return;
 					}
 					OwnedMessage::Text(text)=>{
+						println!("{}",&text);
+						//解析Json
+						let json_r:Result<qam_struct::WebsocketContainer, _> =serde_json::from_str(&text);
+						if let Err(_)= json_r {
+							println!("Can't parse into json:{}",&text);
+							continue;
+						}
+						let container=json_r.unwrap();
+						//println!("{:?}",container);
 
+						//根据任务类型分流处理
+						match &container.task[..] {
+							//测试用例：{"id":"1","task":"Command","direction":0,"payload":"{\"command\":\"ls\",\"option\":{\"pwd\":\"\",\"env\":\"\",\"encoding\":\"\",\"timeout\":6000,\"shell\":\"cmd\"}}"}
+							"Command" => {
+								//解析Command payload
+								let cmd_pld_str=&container.payload[..];
+								let cmd_pld_res:Result<qam_struct::CommandPayload,_>=serde_json::from_str(&cmd_pld_str);
+								if let Err(e)=cmd_pld_res{
+									println!("Can't parse into CommandPayload:{},for:{}",&cmd_pld_str,e.to_string());
+									continue;
+								}
+								let cmd_pld=cmd_pld_res.unwrap();
+								//传入处理函数
+								let tmp= qam_command::process_command(cmd_pld);
+							},
+							"File"=>{
+								println!("Exec file")
+							},
+							_ => {
+								println!("Invalid command:{}",&container.task)
+							}
+						}
 					}
 					_ => {
-						println!("Got illegal message,ignore")
+						println!("Got illegal message,ignore");
 					}
 				}
 			}
